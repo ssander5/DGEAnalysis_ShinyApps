@@ -171,9 +171,10 @@ server <- function(input, output) {
   ########################################
   
   output$correlation = renderPlot({
-    data(varPartData)
-    form = ~Age +(1| Individual) + (1|Tissue) +(1|Batch)
-    C = canCorPairs(form, info)
+    counts=inputGeneCounts()
+    meta=inputMDTable()
+    form = ~(1|Group) + ~Group2
+    C = canCorPairs(form, meta)
     plotCorrMatrix(C)
   }) 
   
