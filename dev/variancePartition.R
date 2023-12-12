@@ -13,7 +13,7 @@ ui <- fluidPage(
     sidebarPanel(
       fileInput("normCounts", "Normalized Counts (csv)", accept=".csv"),
       fileInput("metaDataTable", "Meta Data (csv)", accept=".csv"),
-      actionButton("load", "Load Files"),
+      textInput("model", "model", value="put your model here")
     ),
   
     
@@ -192,14 +192,13 @@ server <- function(input, output) {
     req(input$normCounts)
     counts = inputGeneCounts()
     meta = inputMDTable()
-    form =     form = ~ Age + (1| Individual) + (1 | Tissue) + (1 | Batch)
-    varPart = fitExtractVarPartModel(counts,form, meta)
+    varPart = fitExtractVarPartModel(counts,input$model, meta)
     return(varPart)
   })
   
   output$correlation = renderPlot({
     varPart=partitionVariance()
-    form = form <- ~ Age + (1 | Individual) + (1 | Tissue) + (1 | Batch)
+    form = input$model
     meta = inputMDTable()
     C = canCorPairs(form, meta)
     plotCorrMatrix(C)
@@ -276,13 +275,13 @@ server <- function(input, output) {
   partitionVariance2 = reactive({
     counts = inputBatchCorrected()
     meta = inputMDTable()
-    form =     form = ~ Age + (1| Individual) + (1 | Tissue) + (1 | Batch)
+    form = input$model
     varPart2 = fitExtractVarPartModel(counts,form, meta)
     return(varPart2)
   })
   
   output$correlation2 = renderPlot({
-    form = form <- ~ Age + (1 | Individual) + (1 | Tissue) + (1 | Batch)
+    form = input$model
     meta = inputMDTable()
     C = canCorPairs(form, meta)
     plotCorrMatrix(C)
