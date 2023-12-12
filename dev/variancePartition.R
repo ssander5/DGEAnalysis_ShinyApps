@@ -45,22 +45,41 @@ ui <- fluidPage(
             p("TBD"),
             plotOutput("barSplit"),
             p("TBD"),
-            selectInput("selectPick", "Select a gene", as.character(rownames(geneExpr))),
-            selectInput("selectVect", "Select a source of variation", colnames(info)),
-            p("TBD"),
+            selectInput("selectPick", "Select a gene", c("gene9")),
             plotOutput("pickSplit"),
+            p("TBD"),
+            selectInput("selectVect", "Select a source of variation", c("None")),
             p("TBD"),
             plotOutput("pickStrat")
           )
         ),
         tabPanel("Correction",
-            tableOutput("batchCorrected")
+            #tableOutput("batchCorrected")
+            conditionalPanel(
+              condition="output.inputsUploaded && output.batchCorrected",
+              tags$h1("Batch Corrected Data"),
+              downloadButton("dlCorrected", "Click to Download Data"),
+              p("TBD"),
+              plotOutput("correlation2"),
+              p("TBD"),
+              plotOutput("violin2"),
+              p("TBD"),
+              plotOutput("barSplit2"),
+              p("TBD"),
+              selectInput("selectPick2", "Select a gene", c("gene9")),
+              plotOutput("pickSplit2"),
+              p("TBD"),
+              selectInput("selectVect2", "Select a source of variation", c("None")),
+              p("TBD"),
+              plotOutput("pickStrat2")
+            )
+          )
         )
 
       )
     )
   )
-)
+
 
 ##########################
 #         SERVER        
@@ -130,24 +149,18 @@ server <- function(input, output) {
   ########################################
   #########    Input Handling ###########
   ########################################
-  
   inputGeneCounts = reactive({
     req(input$normCounts)
     if(is.null(input$normCounts)){return(NULL)}
-  
-    countInput = read.csv(file = input$normCounts$datapath, row.names=1)
-    countNamesSet = rownames(countInput)
-  
+    countInput = as.matrix(read.csv(file = input$normCounts$datapath, row.names=1, header=TRUE))
   })
   
   inputMDTable = reactive({
     req(input$metaDataTable)
     if(is.null(input$metaDataTable)){return(NULL)}
-    
-    MDInput = read.csv(file = input$metaDataTable$datapath, row.names=1)
-    mdNamesSet = rownames(MDInput)
-    
+    MDInput = read.csv(file = input$metaDataTable$datapath, row.names=1, header=TRUE)
   })
+  
 
   ########################################
   #########     Input Check    ###########
@@ -161,6 +174,10 @@ server <- function(input, output) {
     }else if(is.null(inputMDTable())) {
       return(FALSE)
     }
+    counts=inputGeneCounts()
+    meta=inputMDTable()
+    updateSelectInput(session = getDefaultReactiveDomain(), "selectPick", choices=as.character(rownames(counts)))
+    updateSelectInput(session = getDefaultReactiveDomain(), "selectVect", choices=colnames(meta))
     return(TRUE)
   }
   
@@ -169,66 +186,139 @@ server <- function(input, output) {
   ########################################
   #########  Run Partitioning  ###########
   ########################################
+
+  partitionVariance = reactive({
+    req(input$metaDataTable)
+    req(input$normCounts)
+    counts = inputGeneCounts()
+    meta = inputMDTable()
+    form =     form = ~ Age + (1| Individual) + (1 | Tissue) + (1 | Batch)
+    varPart = fitExtractVarPartModel(counts,form, meta)
+    return(varPart)
+  })
   
   output$correlation = renderPlot({
-    counts=inputGeneCounts()
-    meta=inputMDTable()
-    form = ~(1|Group) + ~Group2
+    varPart=partitionVariance()
+    form = form <- ~ Age + (1 | Individual) + (1 | Tissue) + (1 | Batch)
+    meta = inputMDTable()
     C = canCorPairs(form, meta)
     plotCorrMatrix(C)
   }) 
   
   output$violin = renderPlot({
-    data(varPartData)
-    form = ~Age +(1| Individual) + (1|Tissue) +(1|Batch)
-    varPart = fitExtractVarPartModel(geneExpr,form,info)
+    varPart = partitionVariance()
     vp = sortCols(varPart)
     plotVarPart(vp)
   })   
   
   output$barSplit = renderPlot({
-    data(varPartData)
-    form = ~Age +(1| Individual) + (1|Tissue) +(1|Batch)
-    varPart = fitExtractVarPartModel(geneExpr,form,info)
-    vp = sortCols(varPart)
+    varPart=partitionVariance()
+    vp=sortCols(varPart)
     plotPercentBars(vp[1:10,])
   })
   
   output$pickSplit = renderPlot({
     i=input$selectPick
-    data(varPartData)
-    form = ~Age +(1| Individual) + (1|Tissue) +(1|Batch)
-    varPart = fitExtractVarPartModel(geneExpr,form,info)
-    vp = sortCols(varPart)
+    varPart = partitionVariance()
+    vp=sortCols(varPart)
     options(repr.plot.height = 2)
     plotPercentBars(vp[i,], width = 0.1)
   }, height = 400)
 
   output$pickStrat = renderPlot({
     i=input$selectPick
-    data(varPartData)
-    form = ~Age +(1| Individual) + (1|Tissue) +(1|Batch)
-    varPart = fitExtractVarPartModel(geneExpr,form,info)
-    x=info[[input$selectVect]]
-    GE = data.frame(Expression = geneExpr[i, ], Vect=x)
-    plotStratify(Expression~Vect, GE, main=rownames(geneExpr)[i], text = format(varPart$Individual[i]*100)) + 
+    counts=inputGeneCounts()
+    meta=inputMDTable()
+    varPart=partitionVariance()
+    x=meta[[input$selectVect]]
+    GE = data.frame(Expression = counts[i, ], Vect=x)
+    plotStratify(Expression ~ Vect, GE, main=rownames(counts)[i], text = format(varPart$Individual[i]*100)) + 
       labs(x=input$selectVect)
   })
   
   ########################################
   ##########  Remove Vectors  ############
   ########################################
-  output$batchCorrected = renderTable({
-    count_matrix <- matrix(rnbinom(400, size=10, prob=0.1), nrow=50, ncol=8)
-    batch <- c(rep(1, 4), rep(2, 4))
-    adjusted = ComBat_seq(count_matrix, batch=batch, group=NULL)
+  inputBatchCorrected = reactive({
+    counts = inputGeneCounts()
+    meta = inputMDTable()
+    batch = meta$Batch
+    adjusted = ComBat_seq(counts, batch=batch, group=NULL)
+    updateSelectInput(session = getDefaultReactiveDomain(), "selectPick2", choices=as.character(rownames(adjusted)))
+    updateSelectInput(session = getDefaultReactiveDomain(), "selectVect2", choices=colnames(meta))
+    return(adjusted)
   })
   
+  output$dlCorrected <- downloadHandler(
+    filename = function() {
+      paste("correctedCounts", "csv", sep = ".")
+    },
+
+    content = function(file) {
+      write.csv(inputBatchCorrected(), file)
+    }
+  )
+  
+  output$batchCorrected <- function(){
+    # check if the input files are valid
+    if(is.null(inputBatchCorrected())) {
+      return(FALSE)
+    }
+    return(TRUE)
+  }
+  
+  outputOptions(output, 'batchCorrected', suspendWhenHidden=FALSE)
   
   ########################################
-  #######  ReRun Partitioning  ###########
+  ########  Re-Run Partitioning  #########
   ########################################
-  #tbd
+  
+  partitionVariance2 = reactive({
+    counts = inputBatchCorrected()
+    meta = inputMDTable()
+    form =     form = ~ Age + (1| Individual) + (1 | Tissue) + (1 | Batch)
+    varPart2 = fitExtractVarPartModel(counts,form, meta)
+    return(varPart2)
+  })
+  
+  output$correlation2 = renderPlot({
+    form = form <- ~ Age + (1 | Individual) + (1 | Tissue) + (1 | Batch)
+    meta = inputMDTable()
+    C = canCorPairs(form, meta)
+    plotCorrMatrix(C)
+  }) 
+  
+  output$violin2 = renderPlot({
+    varPart2 = partitionVariance2()
+    vp2 = sortCols(varPart2)
+    plotVarPart(vp2)
+  })   
+  
+  output$barSplit2 = renderPlot({
+    varPart2=partitionVariance2()
+    vp2=sortCols(varPart2)
+    plotPercentBars(vp2[1:10,])
+  })
+  
+  output$pickSplit2 = renderPlot({
+    i=input$selectPick2
+    varPart2 = partitionVariance2()
+    vp2=sortCols(varPart2)
+    options(repr.plot.height = 2)
+    plotPercentBars(vp2[i,], width = 0.1)
+  }, height = 400)
+  
+  output$pickStrat2 = renderPlot({
+    i=input$selectPick2
+    counts=inputBatchCorrected()
+    meta=inputMDTable()
+    varPart2=partitionVariance2()
+    x=meta[[input$selectVect2]]
+    GE = data.frame(Expression = counts[i, ], Vect=x)
+    plotStratify(Expression ~ Vect, GE, main=rownames(counts)[i], text = format(varPart2$Individual[i]*100)) + 
+      labs(x=input$selectVect)
+  })
+
   
   ############End of Server###########
 } 
