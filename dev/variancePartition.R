@@ -13,7 +13,7 @@ ui <- fluidPage(
     sidebarPanel(
       fileInput("normCounts", "Normalized Counts (csv)", accept=".csv"),
       fileInput("metaDataTable", "Meta Data (csv)", accept=".csv"),
-      textInput("model", "model", value="put your model here")
+      textInput("model", "model", label = "put your model here")
     ),
   
     
@@ -55,6 +55,7 @@ ui <- fluidPage(
         ),
         tabPanel("Correction",
             #tableOutput("batchCorrected")
+            selectInput("selectVar","Select a source of variation to remove (discrete only)", c("Batch")),
             conditionalPanel(
               condition="output.inputsUploaded && output.batchCorrected",
               tags$h1("Batch Corrected Data"),
@@ -173,11 +174,14 @@ server <- function(input, output) {
       return(FALSE)
     }else if(is.null(inputMDTable())) {
       return(FALSE)
+    }else if(is.null(input$model)) {
+      return(FALSE)
     }
     counts=inputGeneCounts()
     meta=inputMDTable()
     updateSelectInput(session = getDefaultReactiveDomain(), "selectPick", choices=as.character(rownames(counts)))
     updateSelectInput(session = getDefaultReactiveDomain(), "selectVect", choices=colnames(meta))
+    updateSelectInput(session = getDefaultReactiveDomain(), "selectVar", choices=colnames(meta))
     return(TRUE)
   }
   
@@ -241,7 +245,7 @@ server <- function(input, output) {
   inputBatchCorrected = reactive({
     counts = inputGeneCounts()
     meta = inputMDTable()
-    batch = meta$Batch
+    batch = meta[[input$selectVar]]
     adjusted = ComBat_seq(counts, batch=batch, group=NULL)
     updateSelectInput(session = getDefaultReactiveDomain(), "selectPick2", choices=as.character(rownames(adjusted)))
     updateSelectInput(session = getDefaultReactiveDomain(), "selectVect2", choices=colnames(meta))
