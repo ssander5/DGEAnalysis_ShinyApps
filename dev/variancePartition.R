@@ -1,7 +1,7 @@
 library(shiny)
 library(variancePartition)
 library(sva)
-
+library(shinyWidgets)
 ##########################
 #         UI       
 ##########################
@@ -35,24 +35,34 @@ ui <- fluidPage(
         ),
         
         tabPanel("Exploration",
-          conditionalPanel(
+            conditionalPanel(
             condition="output.inputsUploaded",
             tags$h1("Initial Data"),
-            p("TBD"),
+
+            materialSwitch(inputId = "showCorr", label = "Show help", value=FALSE),
+            textOutput("corrMatrixHelpText"),
             plotOutput("correlation"),
-            p("TBD"),
+            
+            materialSwitch(inputId = "showViolin", label = "Show help", value=FALSE),
+            textOutput("violinHelpText"),
             plotOutput("violin"),
-            p("TBD"),
+            
+            materialSwitch(inputId = "showBarSplit", label = "Show help", value=FALSE),
+            textOutput("barSplitText"),
             plotOutput("barSplit"),
-            p("TBD"),
+            
+            materialSwitch(inputId = "showPickSplit", label = "Show help", value=FALSE),
+            textOutput("pickSplitHelpText"),
             selectInput("selectPick", "Select a gene", c("gene9")),
             plotOutput("pickSplit"),
-            p("TBD"),
+            
+            materialSwitch(inputId = "showStrat", label = "Show help", value=FALSE),
+            textOutput("stratHelpText"),
             selectInput("selectVect", "Select a source of variation", c("None")),
-            p("TBD"),
             plotOutput("pickStrat")
           )
         ),
+        
         tabPanel("Correction",
             #tableOutput("batchCorrected")
             selectInput("selectVar","Select a source of variation to remove (discrete only)", c("Batch")),
@@ -60,18 +70,27 @@ ui <- fluidPage(
               condition="output.inputsUploaded && output.batchCorrected",
               tags$h1("Batch Corrected Data"),
               downloadButton("dlCorrected", "Click to Download Data"),
-              p("TBD"),
+              
+              materialSwitch(inputId = "showCorr2", label = "Show help", value=FALSE),
+              textOutput("corrMatrixHelpText2"),
               plotOutput("correlation2"),
-              p("TBD"),
+              
+              materialSwitch(inputId = "showViolin2", label = "Show help", value=FALSE),
+              textOutput("violinHelpText2"),
               plotOutput("violin2"),
-              p("TBD"),
+              
+              materialSwitch(inputId = "showBarSplit2", label = "Show help", value=FALSE),
+              textOutput("barSplitText2"),
               plotOutput("barSplit2"),
-              p("TBD"),
+              
+              materialSwitch(inputId = "showPickSplit2", label = "Show help", value=FALSE),
+              textOutput("pickSplitHelpText2"),
               selectInput("selectPick2", "Select a gene", c("gene9")),
               plotOutput("pickSplit2"),
-              p("TBD"),
+              
+              materialSwitch(inputId = "showStrat2", label = "Show help", value=FALSE),
+              textOutput("stratHelpText2"),
               selectInput("selectVect2", "Select a source of variation", c("None")),
-              p("TBD"),
               plotOutput("pickStrat2")
             )
           )
@@ -322,9 +341,92 @@ server <- function(input, output) {
       labs(x=input$selectVect)
   })
 
+  ##########################
+  #        Text
+  ##########################
+  output$corrMatrixHelpText <- renderText({
+    if (input$showCorr == FALSE) {
+      return("")
+    } else {
+      return("correlation matrix help text here")
+    }
+  })
   
-  ############End of Server###########
+  output$violinHelpText <- renderText({
+    if (input$showViolin == FALSE) {
+      return("")
+    } else {
+      return("violin plot help text here")
+    }
+  })
+
+  output$barSplitText <- renderText({
+    if (input$showBarSplit == FALSE) {
+      return("")
+    } else {
+      return("split bar help text here")
+    }
+  })
+
+  output$pickSplitHelpText <- renderText({
+    if (input$showPickSplit == FALSE) {
+      return("")
+    } else {
+      return("selected bar help text here")
+    }
+  })
+
+  output$StratHelpText <- renderText({
+    if (input$showStrat == FALSE) {
+      return("")
+    } else {
+      return("startification help text here")
+    }
+  })
+
+  output$corrMatrixHelpText2 <- renderText({
+    if (input$showCorr2 == FALSE) {
+      return("")
+    } else {
+      return("correlation matrix help text here")
+    }
+  })
+  
+  output$violinHelpText2 <- renderText({
+    if (input$showViolin2 == FALSE) {
+      return("")
+    } else {
+      return("violin plot help text here")
+    }
+  })
+  
+  output$barSplitText2 <- renderText({
+    if (input$showBarSplit2 == FALSE) {
+      return("")
+    } else {
+      return("split bar help text here")
+    }
+  })
+  
+  output$pickSplitHelpText2 <- renderText({
+    if (input$showPickSplit2 == FALSE) {
+      return("")
+    } else {
+      return("selected bar help text here")
+    }
+  })
+  
+  output$StratHelpText2 <- renderText({
+    if (input$showStrat2 == FALSE) {
+      return("")
+    } else {
+      return("startification help text here")
+    }
+  })
+  
+############End of Server###########
 } 
+
 
 ##########################
 #         Main     
