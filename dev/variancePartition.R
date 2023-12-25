@@ -254,7 +254,7 @@ server <- function(input, output) {
     varPart=partitionVariance()
     x=meta[[input$selectVect]]
     GE = data.frame(Expression = counts[i, ], Vect=x)
-    plotStratify(Expression ~ Vect, GE, main=rownames(counts)[i], text = format(varPart$Individual[i]*100)) + 
+    plotStratify(Expression ~ Vect, GE, colorBy=NULL, main=rownames(counts)[i], text = format(varPart$Individual[i]*100)) + 
       labs(x=input$selectVect)
   })
   
@@ -337,7 +337,7 @@ server <- function(input, output) {
     varPart2=partitionVariance2()
     x=meta[[input$selectVect2]]
     GE = data.frame(Expression = counts[i, ], Vect=x)
-    plotStratify(Expression ~ Vect, GE, main=rownames(counts)[i], text = format(varPart2$Individual[i]*100)) + 
+    plotStratify(Expression ~ Vect, GE, colorBy=NULL, main=rownames(counts)[i], text = format(varPart2$Individual[i]*100)) + 
       labs(x=input$selectVect)
   })
 
